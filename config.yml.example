@@ -1,0 +1,24 @@
+s3:
+  access_key: "your-digitalocean-spaces-access-key"
+  secret_key: "your-digitalocean-spaces-secret-key"
+  region: "sgp1"
+  endpoint: "https://sgp1.digitaloceanspaces.com"
+  bucket: "your-bucket-name"
+
+jwt:
+  secret: "GPN9t25YUW2Skh3Hh1TjsRZ3u44qqtOJm7qhOyFMNmmev3U0pku7nSpu69Xdbo6v"
+
+queue:
+  upload_interval: "10s"
+  cleanup_interval: "1h"
+  max_concurrent_uploads: 3
+  retention_period: "24h"
+  skip_tls_verify: false  # Set to true to skip TLS certificate verification for batch uploads
+
+users:
+  - username: "admin"
+    role: "admin"
+    password: "your-secure-password"
+  - username: "user"
+    role: "user"
+    password: "super-strong-password"   

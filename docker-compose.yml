@@ -1,0 +1,13 @@
+version: '3.8'
+
+services:
+  s3browser:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: s3browser
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./config.yml:/app/config.yml:ro
+    restart: unless-stopped

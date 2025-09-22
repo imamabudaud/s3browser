@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pending Uploads - S3 Browser</title>
+    <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    <link rel="stylesheet" href="/assets/batch-common.css">
+    <script src="/assets/api-common.js"></script>
+</head>
+<body>
+    <div class="container" x-data="batchUploadsApp()" x-init="loadUploads(); startAutoRefresh()">
+        <div class="header">
+            <h1>Pending Uploads - S3 Browser</h1>
+            <button @click="logout" class="logout-btn">Logout</button>
+        </div>
+
+        <div class="breadcrumb">
+            <a href="/browse">Home</a> / Pending Uploads
+        </div>
+
+        <div class="refresh-info">
+            <div class="refresh-info-content">
+                <div>
+                    <strong>Auto-refresh:</strong> This page refreshes every 10 seconds to show the latest upload status.
+                    <span x-show="refreshInterval" class="refresh-status">✓ Active</span>
+                    <span x-show="!refreshInterval" class="refresh-status inactive">✗ Inactive</span>
+                    <br>
+                    <small x-show="lastRefresh" class="last-refresh">
+                        Last refresh: <span x-text="lastRefresh ? lastRefresh.toLocaleTimeString() : 'Never'"></span>
+                    </small>
+                </div>
+                <div class="refresh-buttons">
+                    <button @click="loadUploads()" class="btn btn-refresh">
+                        Refresh Now
+                    </button>
+                    <button @click="refreshInterval ? stopAutoRefresh() : startAutoRefresh()" class="btn btn-toggle-refresh" :class="refreshInterval ? 'active' : 'inactive'">
+                        <span x-text="refreshInterval ? 'Stop Auto-refresh' : 'Start Auto-refresh'"></span>
+                    </button>
+                    <button @click="clearAllItems" class="btn btn-clear-all">
+                        Clear All
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div x-show="loading" class="loading">
+            <div>Loading uploads...</div>
+        </div>
+
+        <div x-show="error" class="error" x-text="error"></div>
+
+        <table class="batch-table uploads-table" x-show="!loading && uploads.length > 0">
+            <thead>
+                <tr>
+                    <th>Status</th>
+                    <th>Remote URL</th>
+                    <th>Destination Name</th>
+                    <th>Target Folder</th>
+                </tr>
+            </thead>
+            <tbody>
+                <template x-for="upload in uploads" :key="upload.id">
+                    <tr>
+                        <td>
+                            <span class="status-badge" :class="`status-${upload.status.toLowerCase()}`" x-text="upload.status"></span>
+                        </td>
+                        <td class="url-cell" :title="upload.remoteUrl" x-text="upload.remoteUrl"></td>
+                        <td x-text="upload.destinationName"></td>
+                        <td x-text="upload.targetFolder"></td>
+                    </tr>
+                </template>
+            </tbody>
+        </table>
+
+        <div x-show="!loading && uploads.length === 0" class="empty-state">
+            No batch uploads found. Upload a CSV file to start batch processing.
+        </div>
+    </div>
+
+    <script src="/assets/batch-common.js"></script>
+    <script>
+        const batchConfig = {
+            itemName: 'uploads',
+            queueName: 'batch upload queue',
+            apiEndpoint: '/api/list-queue-uploads',
+            clearAllEndpoint: '/api/clear-queue-uploads'
+        };
+
+        function batchUploadsApp() {
+            const app = createBatchApp(batchConfig);
+            return {
+                ...app,
+                get uploads() { return this.items; }, 
+                loadUploads: app.loadItems
+            };
+        }
+
+        setupBatchPageCleanup();
+    </script>
+</body>
+</html>

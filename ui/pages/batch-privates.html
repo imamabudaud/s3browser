@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pending Unpublishes - S3 Browser</title>
+    <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    <link rel="stylesheet" href="/assets/batch-common.css">
+    <script src="/assets/api-common.js"></script>
+</head>
+<body>
+    <div class="container" x-data="batchPrivatesApp()" x-init="loadPrivates(); startAutoRefresh()">
+        <div class="header">
+            <h1>Pending Unpublishes</h1>
+            <button @click="logout" class="logout-btn">Logout</button>
+        </div>
+
+        <div class="breadcrumb">
+            <a href="/browse">Home</a> / Pending Unpublishes
+        </div>
+
+        <div class="refresh-info">
+            <div class="refresh-info-content">
+                <div>
+                    <strong>Auto-refresh:</strong> This page refreshes every 10 seconds to show the latest private status.
+                    <span x-show="refreshInterval" class="refresh-status">✓ Active</span>
+                    <span x-show="!refreshInterval" class="refresh-status inactive">✗ Inactive</span>
+                    <br>
+                    <small x-show="lastRefresh" class="last-refresh">
+                        Last refresh: <span x-text="lastRefresh ? lastRefresh.toLocaleTimeString() : 'Never'"></span>
+                    </small>
+                </div>
+                <div class="refresh-buttons">
+                    <button @click="loadPrivates()" class="btn btn-refresh">
+                        Refresh Now
+                    </button>
+                    <button @click="refreshInterval ? stopAutoRefresh() : startAutoRefresh()" class="btn btn-toggle-refresh" :class="refreshInterval ? 'active' : 'inactive'">
+                        <span x-text="refreshInterval ? 'Stop Auto-refresh' : 'Start Auto-refresh'"></span>
+                    </button>
+                    <button @click="clearAllItems" class="btn btn-clear-all">
+                        Clear All
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div x-show="loading" class="loading">
+            <div>Loading privates items...</div>
+        </div>
+
+        <div x-show="error" class="error" x-text="error"></div>
+
+        <table class="batch-table private-tables" x-show="!loading && privates.length > 0">
+            <thead>
+                <tr>
+                    <th>Status</th>
+                    <th>File Path</th>
+                    <th>File Name</th>
+                </tr>
+            </thead>
+            <tbody>
+                <template x-for="private in privates" :key="private.id">
+                    <tr>
+                        <td>
+                            <span class="status-badge" :class="`status-${private.status.toLowerCase()}`" x-text="private.status"></span>
+                        </td>
+                        <td class="url-cell" :title="private.filePath" x-text="private.filePath"></td>
+                        <td x-text="private.fileName"></td>
+                    </tr>
+                </template>
+            </tbody>
+        </table>
+
+        <div x-show="!loading && privates.length === 0" class="empty-state">
+            No batch private items found. Select files and use "Make Private" to start batch processing.
+        </div>
+    </div>
+
+    <script src="/assets/batch-common.js"></script>
+    <script>
+        const batchConfig = {
+            itemName: 'private items',
+            queueName: 'batch private queue',
+            apiEndpoint: '/api/list-queue-unpublish',
+            clearAllEndpoint: '/api/clear-queue-unpublish'
+        };
+        
+        function batchPrivatesApp() {
+            const app = createBatchApp(batchConfig);
+            return {
+                ...app,
+                get privates() { return this.items; },
+                loadPrivates: app.loadItems
+            };
+        }
+
+        setupBatchPageCleanup();
+    </script>
+</body>
+</html>

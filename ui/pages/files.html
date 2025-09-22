@@ -1,0 +1,1268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Files - S3 Browser</title>
+    <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    <script src="/assets/api-common.js"></script>
+    <style>
+        /* ===== BASE STYLES ===== */
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            background-color: #f8fafc;
+        }
+        
+        a {
+            text-decoration: none;
+        }
+        
+        h1 {
+            margin: 0;
+            color: #333;
+        }
+
+        /* ===== LAYOUT CONTAINERS ===== */
+        .container {
+            width: 100%;
+            margin: 0;
+            background: white;
+            padding: 20px;
+            box-sizing: border-box;
+            overflow-x: hidden;
+        }
+
+        /* ===== HEADER SECTION ===== */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .logout-btn {
+            background-color: #e53e3e;
+            color: white;
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            text-decoration: none;
+            font-weight: 500;
+        }
+        .logout-btn:hover {
+            background-color: #c53030;
+        }
+
+        /* ===== BREADCRUMB SECTION ===== */
+        .breadcrumb-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .breadcrumb {
+            margin-bottom: 20px;
+            font-size: 14px;
+            color: #718096;
+            font-weight: 500;
+        }
+
+        .breadcrumb a {
+            color: #3182ce;
+            text-decoration: none;
+            font-weight: 600;
+        }
+        .breadcrumb a:hover {
+            color: #2c5aa0;
+            text-decoration: underline;
+        }
+
+        .pending-pages {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        .pending-pages .btn {
+            padding: 5px 10px;
+        }
+
+        /* ===== UPLOAD SECTION ===== */
+        .upload-section {
+            margin-bottom: 20px;
+            padding: 10px;
+            background-color: #f7fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+        }
+
+        .upload-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .upload-card {
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 20px;
+            background-color: white;
+            overflow: hidden;
+            box-sizing: border-box;
+        }
+
+        .upload-card h3 {
+            margin: 0 0 15px 0;
+            color: #333;
+            font-size: 16px;
+        }
+
+        .upload-row {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin-top: 10px;
+        }
+
+        .file-input {
+            flex: 1;
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #cbd5e0;
+            border-radius: 6px;
+            background-color: white;
+            font-size: 14px;
+            box-sizing: border-box;
+            max-width: 100%;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .csv-info {
+            margin-top: 10px;
+            font-size: 12px;
+            color: #666;
+        }
+
+        /* ===== BUTTON STYLES ===== */
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+            font-size: 14px;
+        }
+
+        .btn-primary {
+            background-color: #3182ce;
+            color: white;
+        }
+        .btn-primary:hover {
+            background-color: #2c5aa0;
+        }
+
+        .btn-success {
+            background-color: #38a169;
+            color: white;
+        }
+        .btn-success:hover {
+            background-color: #2f855a;
+        }
+
+        .btn-warn {
+            background-color: #9fa138;
+            color: white;
+        }
+        .btn-warn:hover {
+            background-color: #d2d36e;
+        }
+
+        .btn-danger {
+            background-color: #e53e3e;
+            color: white;
+        }
+        .btn-danger:hover {
+            background-color: #c53030;
+        }
+
+        /* ===== BATCH ACTIONS ===== */
+        .batch-actions {
+            margin-bottom: 15px; 
+            padding: 15px; 
+            background-color: #f7fafc; 
+            border: 1px solid #e2e8f0; 
+            border-radius: 8px;
+            height: 25px;
+        }
+        .batch-actions .btn {
+            padding: 5px 8px;
+        }
+
+        .batch-actions-container {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .create-folder-btn {
+            flex-shrink: 0;
+        }
+        
+        .batch-actions-main {
+            display: flex;
+            align-items: end;
+            justify-content: space-between;
+            flex: 1;
+        }
+        
+        .batch-actions-selected {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .batch-actions-info {
+            color: #4a5568;
+            font-weight: 500;
+        }
+
+        .btn-make-public {
+            background-color: #38a169;
+            color: white;
+        }
+        
+        .btn-make-private {
+            background-color: #38a169;
+            color: white;
+        }
+        
+        .btn-delete {
+            background-color: #e53e3e;
+            color: white;
+        }
+        
+        .btn-export-csv {
+            background-color: #6f42c1;
+            color: white;
+        }
+        
+        .btn-clear-selection {
+            background-color: #718096;
+            color: white;
+        }
+
+        /* ===== TABLE STYLES ===== */
+        .files-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        .files-table th,
+        .files-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+        .files-table th {
+            background-color: #f7fafc;
+            font-weight: 600;
+            color: #4a5568;
+            border-bottom: 2px solid #e2e8f0;
+        }
+        .files-table tr:hover {
+            background-color: #f7fafc;
+        }
+
+        .table-checkbox {
+            width: 20px;
+        }
+        
+        .table-size {
+            text-align: right;
+        }
+        
+        .table-modified {
+            width: 170px;
+            text-align: right;
+        }
+        
+        .table-actions {
+            width: 250px;
+            text-align: right;
+            height: 25px;
+        }
+        
+        .table-size-cell {
+            text-align: right;
+        }
+        
+        .table-modified-cell {
+            text-align: right;
+        }
+
+        /* ===== TABLE ACTION BUTTONS ===== */
+        .btn-stats {
+            background-color: #6f42c1;
+            color: white;
+            padding: 4px 8px;
+            font-size: 12px;
+            margin-right: 4px;
+        }
+        
+        .btn-make-private-small {
+            background-color: #718096;
+            color: white;
+            padding: 4px 8px;
+            font-size: 12px;
+            margin-right: 4px;
+        }
+        
+        .btn-view-public {
+            background-color: #28a745;
+            color: white;
+            padding: 4px 8px;
+            font-size: 12px;
+            margin-right: 4px;
+        }
+        
+        .btn-make-public-small {
+            background-color: #38a169;
+            color: white;
+            padding: 4px 8px;
+            font-size: 12px;
+            margin-right: 4px;
+        }
+        
+        .btn-delete-small {
+            padding: 4px 8px;
+            font-size: 12px;
+        }
+
+        /* ===== STATUS BADGES ===== */
+        .status-badge {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        .status-pending {
+            background-color: #fef3c7;
+            color: #92400e;
+        }
+        .status-success {
+            background-color: #d1fae5;
+            color: #065f46;
+        }
+        .status-failed {
+            background-color: #fee2e2;
+            color: #991b1b;
+        }
+
+        /* ===== MODAL STYLES ===== */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+        .modal.show {
+            display: block;
+        }
+        .modal-content {
+            background-color: white;
+            margin: 5% auto;
+            padding: 24px;
+            border-radius: 12px;
+            width: 80%;
+            max-width: 600px;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+        }
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: -16px;
+        }
+        .close:hover {
+            color: black;
+        }
+
+        .modal-label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+        }
+        
+        .modal-input {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #cbd5e0;
+            border-radius: 6px;
+            box-sizing: border-box;
+            font-size: 14px;
+        }
+        
+        .modal-input-readonly {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #cbd5e0;
+            border-radius: 6px;
+            box-sizing: border-box;
+            background-color: #f7fafc;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        
+        .modal-actions {
+            text-align: right;
+        }
+        
+        .modal-title {
+            margin-top: 0;
+        }
+        
+        .modal-content-section {
+            margin-bottom: 20px;
+        }
+
+        .btn-cancel {
+            background-color: #718096;
+            color: white;
+            margin-right: 10px;
+        }
+        
+        .btn-copy-url {
+            margin-right: 10px;
+        }
+        
+        .btn-close {
+            background-color: #718096;
+            color: white;
+        }
+
+        /* ===== FOLDER STATS MODAL ===== */
+        .modal-stats-container {
+            background-color: #f7fafc;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+        }
+        
+        .modal-stats-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .modal-stats-title {
+            font-weight: 600;
+            font-size: 18px;
+            color: #2d3748;
+        }
+        
+        .modal-stats-path {
+            font-size: 14px;
+            color: #718096;
+            font-family: monospace;
+        }
+        
+        .modal-stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        
+        .modal-stats-card {
+            text-align: center;
+            padding: 15px;
+            background-color: white;
+            border-radius: 6px;
+            border: 1px solid #e2e8f0;
+        }
+        
+        .modal-stats-number {
+            font-size: 20px;
+            font-weight: 700;
+            color: #3182ce;
+        }
+        
+        .modal-stats-number-green {
+            font-size: 20px;
+            font-weight: 700;
+            color: #38a169;
+        }
+        
+        .modal-stats-label {
+            font-size: 14px;
+            color: #718096;
+        }
+
+        /* ===== UTILITY CLASSES ===== */
+        .error {
+            color: #d32f2f;
+            margin-top: 10px;
+            padding: 10px;
+        }
+        .loading {
+            text-align: center;
+            padding: 20px;
+        }
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #718096;
+            font-style: italic;
+        }
+
+        /* ===== RESPONSIVE DESIGN ===== */
+        @media (max-width: 768px) {
+            .upload-row {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            .upload-row .file-input {
+                margin-bottom: 10px;
+            }
+            
+            .upload-grid {
+                grid-template-columns: 1fr;
+                gap: 15px;
+            }
+            
+            .batch-actions > div {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 10px;
+            }
+            .batch-actions > div > div:last-child {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container" x-data="filesApp()" x-init="init()">
+        <div class="header">
+            <h1>S3 Browser</h1>
+            <button @click="logout" class="logout-btn">Logout</button>
+        </div>
+
+        <div class="breadcrumb-container">
+            <div class="breadcrumb">
+                <a href="#" @click="navigateTo('')">Home</a>
+                <template x-for="crumb in breadcrumbs" :key="crumb.path">
+                    <span> / <a href="#" @click="navigateTo(crumb.path)" x-text="crumb.name"></a></span>
+                </template>
+            </div>
+
+            <div class="pending-pages">
+                <a href="/pending-uploads" class="btn btn-warn" target="_blank">
+                    Pending Upload
+                </a>
+                <a href="/pending-publics" class="btn btn-warn" target="_blank">
+                    Pending Publish
+                </a>
+                <a href="/pending-privates" class="btn btn-warn" target="_blank">
+                    Pending Unpublish
+                </a>
+                <a href="/pending-deletes" class="btn btn-warn" target="_blank">
+                    Pending Delete
+                </a>
+            </div>
+        </div>
+
+        <div class="upload-section">
+            <div class="upload-grid">
+                <div class="upload-card">
+                    <h3>Upload Files</h3>
+                    <div class="upload-row">
+                        <input type="file" class="file-input" multiple @change="handleFileSelect" x-ref="fileInput">
+                        <button @click="uploadFiles" class="btn btn-primary" :disabled="!selectedUploadFiles.length">
+                            Upload Files
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="upload-card">
+                    <h3>Remote Upload (CSV)</h3>
+                    <div class="upload-row">
+                        <input type="file" class="file-input" accept=".csv" @change="handleCSVSelect" x-ref="csvInput">
+                        <button @click="uploadCSV" class="btn btn-success" :disabled="!selectedCSV">
+                            Upload CSV
+                        </button>
+                    </div>
+                    <div class="csv-info">
+                        <strong>CSV : <a href="/assets/example.csv">example.csv</a></strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div x-show="loading" class="loading">
+            <div>Loading files...</div>
+        </div>
+
+        <div x-show="error" class="error" x-text="error"></div>
+
+        <div class="batch-actions">
+            <div class="batch-actions-container">
+                <div x-show="user.role === 'admin' && selectedFiles.length === 0" class="create-folder-btn">
+                    <button @click="showCreateFolderModal = true" class="btn btn-primary">Create Folder</button>
+                </div>
+                
+                <div class="batch-actions-main">
+                    <div x-show="selectedFiles.length > 0" class="batch-actions-selected">
+                        <button @click="batchMakePublic" class="btn btn-make-public" :disabled="selectedFiles.length === 0">
+                            Make Public
+                        </button>
+                        <button @click="batchMakePrivate" class="btn btn-make-private" :disabled="selectedFiles.length === 0">
+                            Make Private
+                        </button>
+                        <button x-show="user.role === 'admin'" @click="batchDelete" class="btn btn-delete" :disabled="selectedFiles.length === 0">
+                            Delete
+                        </button>
+                        <button @click="exportSelectedFilesCSV" class="btn btn-export-csv" :disabled="selectedFiles.length === 0">
+                            Export CSV
+                        </button>
+                    </div>
+
+                    <div x-show="selectedFiles.length > 0" class="batch-actions-info">
+                        <span x-text="selectedFiles.length"></span> item(s) selected
+                        <button @click="clearSelection" class="btn btn-clear-selection">
+                            Clear Selection
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <table class="files-table" x-show="!loading && files.length > 0">
+            <thead>
+                <tr>
+                    <th class="table-checkbox">
+                        <input x-show="!allDirs" type="checkbox" @change="toggleAllSelection" :checked="allSelected" :indeterminate="someSelected && !allSelected">
+                    </th>
+                    <th>Name</th>
+                    <th class="table-size">Size</th>
+                    <th class="table-modified">Modified</th>
+                    <th class="table-actions">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                <template x-for="file in files" :key="file.key">
+                    <tr>
+                        <td>
+                            <input x-show="!file.isDir" type="checkbox" :value="file.key" @change="toggleFileSelection(file.key)" :checked="selectedFiles.includes(file.key)">
+                        </td>
+                        <td>
+                            <template x-if="file.isDir">
+                                <a href="#" @click="navigateTo(file.key)" x-text="'📁 ' + file.name"></a>
+                            </template>
+                            <template x-if="!file.isDir">
+                                <a href="#" @click="handleFileClick(file)" x-text="getFileIcon(file.name) + ' ' + file.name"></a>
+                            </template>
+                        </td>
+                        <td x-text="file.isDir ? '-' : formatSize(file.size)" class="table-size-cell"></td>
+                        <td x-text="file.lastModified" class="table-modified-cell"></td>
+                        <td class="table-actions">
+                            <button x-show="file.isDir && selectedFiles.length === 0" @click="getFolderStats(file.key)" class="btn btn-stats">Stats</button>
+                            <button x-show="!file.isDir && file.isPublic && selectedFiles.length === 0" @click="makePrivate(file.key)" class="btn btn-make-private-small">Make Private</button>
+                            <button x-show="!file.isDir && file.isPublic && selectedFiles.length === 0" @click="showPublicURL(file.publicUrl || 'URL not available')" class="btn btn-view-public">View Public</button>
+                            <button x-show="!file.isDir && !file.isPublic && selectedFiles.length === 0" @click="makePublic(file.key)" class="btn btn-make-public-small">Make Public</button>
+                            <button x-show="user.role === 'admin' && selectedFiles.length === 0" @click="deleteItem(file.key, file.name, file.isDir)" class="btn btn-danger btn-delete-small">Delete</button>
+                        </td>
+                    </tr>
+                </template>
+            </tbody>
+        </table>
+
+        <div x-show="!loading && files.length === 0" class="empty-state">
+            No files found
+        </div>
+
+        <div class="modal" :class="{ show: showCreateFolderModal }">
+            <div class="modal-content">
+                <span class="close" @click="showCreateFolderModal = false">&times;</span>
+                <div class="modal-content-section">
+                    <label for="folderName" class="modal-label">Folder Name:</label>
+                    <input type="text" id="folderName" x-model="newFolderName" class="modal-input">
+                </div>
+                <div class="modal-actions">
+                    <button @click="showCreateFolderModal = false" class="btn btn-cancel">Cancel</button>
+                    <button @click="createFolder" class="btn btn-primary">Create Folder</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal" :class="{ show: showPublicURLModal }">
+            <div class="modal-content">
+                <span class="close" @click="showPublicURLModal = false">&times;</span>
+                <div class="modal-content-section">
+                    <label for="publicURL" class="modal-label">Public URL:</label>
+                    <input type="text" id="publicURL" :value="publicURL" readonly class="modal-input-readonly">
+                </div>
+                <div class="modal-actions">
+                    <button @click="copyToClipboard" class="btn btn-primary btn-copy-url">Copy URL</button>
+                    <button @click="showPublicURLModal = false" class="btn btn-close">Close</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal" :class="{ show: showFolderStatsModal }">
+            <div class="modal-content">
+                <span class="close" @click="showFolderStatsModal = false">&times;</span>
+                <h3 class="modal-title">Folder Statistics</h3>
+                <div class="modal-content-section">
+                    <div class="modal-stats-container">
+                        <div class="modal-stats-header">
+                            <div>
+                                <div class="modal-stats-title" x-text="folderStats.folderName"></div>
+                                <div class="modal-stats-path" x-text="folderStats.folderPath"></div>
+                            </div>
+                        </div>
+                        <div class="modal-stats-grid">
+                            <div class="modal-stats-card">
+                                <div class="modal-stats-number" x-text="folderStats.fileCount?.toLocaleString() || '0'"></div>
+                                <div class="modal-stats-label">Files</div>
+                            </div>
+                            <div class="modal-stats-card">
+                                <div class="modal-stats-number-green" x-text="formatSize(folderStats.totalSize || 0)"></div>
+                                <div class="modal-stats-label">Total Size</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function filesApp() {
+            return {
+                files: [],
+                breadcrumbs: [],
+                currentPath: '',
+                loading: false,
+                error: '',
+                user: JSON.parse(localStorage.getItem('user') || '{}'),
+                selectedFiles: [],
+                selectedUploadFiles: [],
+                selectedCSV: null,
+                showCreateFolderModal: false,
+                showPublicURLModal: false,
+                showFolderStatsModal: false,
+                publicURL: '',
+                newFolderName: '',
+                folderStats: {},
+
+                init() {
+                    // Initialize current path from URL on page load
+                    this.initializeFromURL();
+                    this.loadFiles();
+                    
+                    // Set initial state in history
+                    this.setInitialHistoryState();
+                    
+                    // Listen for browser back/forward navigation
+                    window.addEventListener('popstate', (event) => {
+                        // Handle all popstate events
+                        this.initializeFromURL();
+                        this.loadFiles();
+                    });
+                },
+
+                setInitialHistoryState() {
+                    // Set the initial state in browser history
+                    const url = new URL(window.location);
+                    if (this.currentPath) {
+                        url.searchParams.set('path', this.currentPath);
+                    } else {
+                        url.searchParams.delete('path');
+                    }
+                    window.history.replaceState({ path: this.currentPath }, '', url);
+                },
+
+                initializeFromURL() {
+                    // Get current path from URL query parameter
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const pathFromUrl = urlParams.get('path');
+                    
+                    if (pathFromUrl) {
+                        this.currentPath = decodeURIComponent(pathFromUrl);
+                    }
+                    
+                    this.updateBreadcrumbs();
+                },
+
+                updateURL() {
+                    // Update URL without page reload
+                    const url = new URL(window.location);
+                    if (this.currentPath) {
+                        url.searchParams.set('path', this.currentPath);
+                    } else {
+                        url.searchParams.delete('path');
+                    }
+                    
+                    // Add to browser history with state
+                    window.history.pushState({ path: this.currentPath }, '', url);
+                },
+
+                get allDirs() {
+                    const files = this.files.filter(file => !file.isDir);
+                    return files.length === 0;
+                },
+
+                get allSelected() {
+                    const files = this.files.filter(file => !file.isDir);
+                    return files.length > 0 && files.every(file => this.selectedFiles.includes(file.key));
+                },
+
+                get someSelected() {
+                    const files = this.files.filter(file => !file.isDir);
+                    return files.length > 0 && this.selectedFiles.length > 0 && files.some(file => this.selectedFiles.includes(file.key));
+                },
+
+                async loadFiles() {
+                    this.loading = true;
+                    this.error = '';
+                    
+                    try {
+                        const response = await apiCall('GET', `/api/list-objects?prefix=${this.currentPath}`);
+                        if (response.data.success) {
+                            this.files = response.data.data || [];
+                            this.updateBreadcrumbs();
+                        } else {
+                            console.log('LoadFiles failed:', response.data.error);
+                            this.error = response.data.error;
+                        }
+                    } catch (err) {
+                        console.log('LoadFiles error:', err);
+                        this.error = err.response?.data?.error || 'Failed to load files';
+                    } finally {
+                        this.loading = false;
+                    }
+                },
+
+                navigateTo(path) {
+                    this.currentPath = path;
+                    this.clearSelection();
+                    this.updateURL(); // Update URL when navigating
+                    this.loadFiles();
+                },
+
+                updateBreadcrumbs() {
+                    this.breadcrumbs = [];
+                    if (this.currentPath) {
+                        const parts = this.currentPath.split('/').filter(p => p);
+                        let currentPath = '';
+                        parts.forEach(part => {
+                            currentPath += part;
+                            this.breadcrumbs.push({
+                                name: part,
+                                path: currentPath
+                            });
+                            currentPath += '/';
+                        });
+                    }
+                },
+
+                handleFileSelect(event) {
+                    this.selectedUploadFiles = Array.from(event.target.files);
+                },
+
+                handleCSVSelect(event) {
+                    this.selectedCSV = event.target.files[0];
+                },
+
+                async uploadFiles() {
+                    if (!this.selectedUploadFiles.length) return;
+                    
+                    const formData = new FormData();
+                    this.selectedUploadFiles.forEach(file => {
+                        formData.append('files', file);
+                    });
+                    formData.append('prefix', this.currentPath);
+                    
+                    try {
+                        const response = await uploadFormData('/api/upload-object', formData);
+                        
+                        console.log('Upload response:', response.data);
+                        console.log('Response success:', response.data.success);
+                        
+                        if (response.data.success) {
+                            console.log('Upload successful, clearing error and reloading files');
+                            this.error = ''; // Clear any previous errors
+                            this.loadFiles();
+                            this.selectedUploadFiles = [];
+                            this.$refs.fileInput.value = '';
+                        } else {
+                            console.log('Upload failed:', response.data.error);
+                            this.error = response.data.error || 'Upload failed';
+                        }
+                    } catch (err) {
+                        console.error('Upload error:', err);
+                        this.error = err.response?.data?.error || 'Upload failed';
+                    }
+                },
+
+                async uploadCSV() {
+                    if (!this.selectedCSV) return;
+                    
+                    const formData = new FormData();
+                    formData.append('csvFile', this.selectedCSV);
+                    formData.append('prefix', this.currentPath);
+                    
+                    try {
+                        const response = await uploadFormData('/api/remote-uploads', formData);
+                        
+                        if (response.data.success) {
+                            window.location.href = '/pending-uploads';
+                        } else {
+                            this.error = response.data.error;
+                        }
+                    } catch (err) {
+                        this.error = err.response?.data?.error || 'CSV upload failed';
+                    }
+                },
+
+                async createFolder() {
+                    if (!this.newFolderName.trim()) return;
+                    
+                    try {
+                        const response = await apiCall('POST', '/api/create-folder', {
+                            folderName: this.newFolderName,
+                            prefix: this.currentPath
+                        });
+                        
+                        if (response.data.success) {
+                            this.showCreateFolderModal = false;
+                            this.newFolderName = '';
+                            this.loadFiles();
+                        } else {
+                            this.error = response.data.error;
+                        }
+                    } catch (err) {
+                        this.error = err.response?.data?.error || 'Failed to create folder';
+                    }
+                },
+
+                async deleteItem(key, name, isDir) {
+                    const itemType = isDir ? 'folder' : 'file';
+                    if (!confirm(`Are you sure you want to delete ${itemType} "${name}"?`)) return;
+                    
+                    try {
+                        const response = await apiCall('DELETE', '/api/delete-objects', { keys: [key] });
+                        if (response.data.success) {
+                            this.loadFiles();
+                        } else {
+                            this.error = response.data.error;
+                        }
+                    } catch (err) {
+                        this.error = err.response?.data?.error || 'Delete failed';
+                    }
+                },
+
+                async makePublic(key) {
+                    try {
+                        const response = await apiCall('POST', '/api/publish-objects', { keys: [key] });
+                        if (response.data.success) {
+                            this.loadFiles();
+                        } else {
+                            this.error = response.data.error;
+                        }
+                    } catch (err) {
+                        this.error = err.response?.data?.error || 'Failed to make public';
+                    }
+                },
+
+                async makePrivate(key) {
+                    try {
+                        const response = await apiCall('POST', '/api/unpublish-objects', { keys: [key] });
+                        if (response.data.success) {
+                            this.loadFiles();
+                        } else {
+                            this.error = response.data.error;
+                        }
+                    } catch (err) {
+                        this.error = err.response?.data?.error || 'Failed to make private';
+                    }
+                },
+
+                showPublicURL(url) {
+                    this.publicURL = url || 'URL not available';
+                    this.showPublicURLModal = true;
+                },
+
+                copyToClipboard() {
+                    navigator.clipboard.writeText(this.publicURL).then(() => {
+                        alert('URL copied to clipboard!');
+                    });
+                },
+
+                isImageFile(fileName) {
+                    const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp', '.svg', '.tiff', '.ico'];
+                    const ext = fileName.toLowerCase().substring(fileName.lastIndexOf('.'));
+                    return imageExtensions.includes(ext);
+                },
+
+                getFileIcon(fileName) {
+                    if (this.isImageFile(fileName)) {
+                        return '🖼️';
+                    }
+                    return '📄';
+                },
+
+                handleFileClick(file) {
+                    if (this.isImageFile(file.name)) {
+                        const url = `/preview?file=${encodeURIComponent(file.key)}`;
+                        window.open(url, '_blank');
+                    } else {
+                        const url = `/files/${encodeURIComponent(file.key)}`;
+                        window.open(url, '_blank');
+                    }
+                },
+
+                async getFolderStats(key) {
+                    try {
+                        const response = await apiCall('GET', `/api/get-folder-statistics?prefix=${encodeURIComponent(key)}`);
+                        if (response.data.success) {
+                            const stats = response.data.data;
+                            const folderName = key.split('/').filter(p => p).pop() || 'Root';
+                            
+                            this.folderStats = {
+                                folderName: folderName,
+                                folderPath: stats.folderPath,
+                                fileCount: stats.fileCount,
+                                totalSize: stats.totalSize
+                            };
+                            
+                            this.showFolderStatsModal = true;
+                        } else {
+                            this.error = response.data.error || 'Failed to get folder stats';
+                        }
+                    } catch (err) {
+                        this.error = err.response?.data?.error || 'Failed to get folder stats';
+                    }
+                },
+
+                formatSize(bytes) {
+                    if (bytes === 0) return '0 B';
+                    const k = 1024;
+                    const sizes = ['B', 'KB', 'MB', 'GB'];
+                    const i = Math.floor(Math.log(bytes) / Math.log(k));
+                    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+                },
+
+                toggleAllSelection() {
+                    if (this.allSelected) {
+                        this.selectedFiles = [];
+                    } else {
+                        this.selectedFiles = this.files.filter(file => !file.isDir).map(file => file.key);
+                    }
+                },
+
+                toggleFileSelection(fileKey) {
+                    const index = this.selectedFiles.indexOf(fileKey);
+                    if (index > -1) {
+                        this.selectedFiles.splice(index, 1);
+                    } else {
+                        this.selectedFiles.push(fileKey);
+                    }
+                },
+
+                clearSelection() {
+                    this.selectedFiles = [];
+                },
+
+                async exportSelectedFilesCSV() {
+                    if (this.selectedFiles.length === 0) return;
+                    
+                    try {
+                        // Filter selected files to only include files (not directories)
+                        const selectedFileObjects = this.selectedFiles
+                            .map(key => this.files.find(f => f.key === key))
+                            .filter(file => file && !file.isDir);
+                        
+                        if (selectedFileObjects.length === 0) {
+                            this.error = 'No files selected. Directories cannot be exported.';
+                            return;
+                        }
+                        
+                        // Call backend API to export CSV
+                        const response = await apiCall('POST', '/api/export-published-objects', {
+                            keys: selectedFileObjects.map(file => file.key)
+                        });
+                        
+                        // Create and download the CSV file
+                        const blob = new Blob([response.data], { type: 'text/csv' });
+                        const url = window.URL.createObjectURL(blob);
+                        
+                        const link = document.createElement('a');
+                        link.href = url;
+                        link.download = 'selected_files_public_urls.csv';
+                        document.body.appendChild(link);
+                        link.click();
+                        
+                        // Clean up
+                        document.body.removeChild(link);
+                        window.URL.revokeObjectURL(url);
+                        
+                    } catch (err) {
+                        this.error = 'Failed to export CSV: ' + (err.message || 'Unknown error');
+                        console.error('CSV export error:', err);
+                    }
+                },
+
+                async batchDelete() {
+                    // Filter out directories for make batch delete action
+                    const filesOnly = this.selectedFiles.filter(key => {
+                        const file = this.files.find(f => f.key === key);
+                        return file && !file.isDir;
+                    });
+
+                    if (filesOnly.length === 0) {
+                        this.error = 'No files selected. Directories cannot be deleted via batch operation.';
+                        return;
+                    }
+
+                    if (filesOnly.length !== this.selectedFiles.length) {
+                        if (!confirm(`Only ${filesOnly.length} file(s) will be deleted. Directories will be skipped. Continue?`)) {
+                            return;
+                        }
+                    }
+
+                    if (!confirm(`Are you sure you want to delete ${filesOnly.length} file(s)? This will add them to the batch delete queue.`)) return;
+
+                    this.loading = true;
+                    this.error = '';
+
+                    try {
+                        const response = await apiCall('DELETE', '/api/delete-objects', {
+                            keys: filesOnly
+                        });
+
+                        if (response.data.success) {
+                            this.selectedFiles = [];
+                            this.loadFiles();
+                            // Redirect to batch public page
+                            window.location.href = '/pending-deletes';
+                        } else {
+                            this.error = response.data.error || 'Batch delete failed';
+                        }
+                    } catch (err) {
+                        this.error = err.response?.data?.error || 'Batch delete failed';
+                    } finally {
+                        this.loading = false;
+                    }
+                },
+
+                async batchMakePublic() {
+                    // Filter out directories for make public action
+                    const filesOnly = this.selectedFiles.filter(key => {
+                        const file = this.files.find(f => f.key === key);
+                        return file && !file.isDir;
+                    });
+                    
+                    if (filesOnly.length === 0) {
+                        this.error = 'No files selected. Directories cannot be made public.';
+                        return;
+                    }
+                    
+                    if (filesOnly.length !== this.selectedFiles.length) {
+                        if (!confirm(`Only ${filesOnly.length} file(s) will be made public. Directories will be skipped. Continue?`)) {
+                            return;
+                        }
+                    }
+                    
+                    if (!confirm(`Are you sure you want to make ${filesOnly.length} file(s) public? This will add them to the batch public queue.`)) return;
+                    
+                    this.loading = true;
+                    this.error = '';
+                    
+                    try {
+                        const response = await apiCall('POST', '/api/publish-objects', {
+                            keys: filesOnly
+                        });
+                        
+                        if (response.data.success) {
+                            this.selectedFiles = [];
+                            this.loadFiles();
+                            // Redirect to batch public page
+                            window.location.href = '/pending-publics';
+                        } else {
+                            this.error = response.data.error || 'Batch make public failed';
+                        }
+                    } catch (err) {
+                        this.error = err.response?.data?.error || 'Batch make public failed';
+                    } finally {
+                        this.loading = false;
+                    }
+                },
+
+                async batchMakePrivate() {
+                    // Filter out directories for make private action
+                    const filesOnly = this.selectedFiles.filter(key => {
+                        const file = this.files.find(f => f.key === key);
+                        return file && !file.isDir;
+                    });
+
+                    if (filesOnly.length === 0) {
+                        this.error = 'No files selected. Directories cannot be made private.';
+                        return;
+                    }
+
+                    if (filesOnly.length !== this.selectedFiles.length) {
+                        if (!confirm(`Only ${filesOnly.length} file(s) will be made private. Directories will be skipped. Continue?`)) {
+                            return;
+                        }
+                    }
+
+                    if (!confirm(`Are you sure you want to make ${filesOnly.length} file(s) private? This will add them to the batch private queue.`)) return;
+
+                    this.loading = true;
+                    this.error = '';
+
+                    try {
+                        const response = await apiCall('POST', '/api/unpublish-objects', {
+                            keys: filesOnly
+                        });
+
+                        if (response.data.success) {
+                            this.selectedFiles = [];
+                            this.loadFiles();
+                            // Redirect to batch private pages
+                            window.location.href = '/pending-privates';
+                        } else {
+                            this.error = response.data.error || 'Batch make private failed';
+                        }
+                    } catch (err) {
+                        this.error = err.response?.data?.error || 'Batch make private failed';
+                    } finally {
+                        this.loading = false;
+                    }
+                },
+
+                logout() {
+                    logout();
+                }
+            }
+        }
+    </script>
+</body>
+</html>
